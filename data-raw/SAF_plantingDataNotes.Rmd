@@ -1,0 +1,110 @@
+---
+title: "Very prelim notes on SAF Planting Data for Northern BC"
+author: "Hardy Griesbauer"
+date: "07/02/2020"
+output:
+  word_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+
+library(tidyverse)
+library(knitr)
+
+knitr::opts_chunk$set(echo = FALSE)
+
+# suppress scientific notation
+options(scipen=999)
+
+# Load datasets
+# Original
+load("datRaw.RData")
+
+# cleaned
+load("blData.Rdata")
+
+```
+
+## Some notes on the SAF planting data 
+Original data were obtained from RESULTS, downloading the Planting Report for all openings in four regions: Omineca, Skeena, Cariboo, and Northeast.
+
+I filtered the data for records of Bl and Ba planting only.  There was one record with species recorded as 'BB' (Balsam fir) - I removed it.
+
+NOTE: I supressed all the R code used to make this document. Let me know if you'd prefer to see it (easy to do).
+
+Here is a summary of the records in the initial dataset:
+
+```{r}
+# Tally by number of openings and trees
+
+blDat %>% 
+  dplyr::select(Species=SPECIES,Region=REGION,everything()) %>% # some formatting to improve font
+  group_by(Species,Region,OPENING_ID) %>% 
+  summarise(Num.Openings=n(),
+            Num.Trees=sum(NUMBER_PLANTED)) %>% 
+  ungroup() %>% 
+  group_by(Species,Region) %>% 
+  summarise(Num.Openings=n(),
+            Num.Trees=sum(Num.Trees)) %>% 
+  arrange(desc(Species),desc(Num.Openings)) %>% 
+  kable()
+  
+
+```
+
+So, we have records of `r sum(blDat$NUMBER_PLANTED)` trees in total.
+
+Note that I only present data on number trees planted, not area planted.  This is because in many treatment units, Bl could have been part of a mixed plant.  To most accurately report area planted, we could prorate treatment unit area using an assumption of target 1200 sph?  In other words, we could divide number of Bl (Ba) planted by 1200 to get a rough figure of area planted to Bl (Ba).  Let me know if that makes sense.
+
+### Records missing BGC information
+Below is a summary of openings that had missing BGC (Zone and subzone) information in the original dataset:
+
+```{r}
+dat[is.na(dat$GENERALIZED_BGC_ZONE_CODE),] %>% 
+  dplyr::select(Species=SILV_TREE_SPECIES_CODE,everything()) %>% 
+  group_by(Species,OPENING_ID) %>% 
+  summarise(Num.Openings=n(),
+            Num.Trees=sum(NUMBER_PLANTED)) %>% 
+  ungroup() %>% 
+  group_by(Species) %>% 
+   summarise(Num.Openings=n(),
+            Num.Trees=sum(Num.Trees)) %>% 
+  arrange(desc(Species)) %>% 
+  kable()
+
+```
+
+There are 25 openings planted with Bl missing BGC information (just under 600,000 trees), and 18 openings planted with Ba missing BGC information.
+
+Using the bcdata() package for R, I was able to identify BGC zone and subzone for all of these openings except one.  I used BEC Version 10 for this.  Also, where these openings spanned more than one BGC zone/subzone, I simply selected the first zone in the record.
+
+This means that the BGC information in this dataset is a combination of BGC information as entered into RESULTS, and BEC v10 information from a spatial join.  
+
+The one opening that I could not get BGC data for was planted with Ba, two seedlots.  Probably not a big deal.
+
+#### Fixing old BGC codes
+Also, I corrected records that had the old BGC codes. 
+
+Here is a summary of the number of trees planted per BEC Zone:
+```{r}
+blDat %>% 
+  dplyr::select(Species=SPECIES,Region=REGION,everything()) %>% # some formatting to improve font
+  group_by(Species,Zone,OPENING_ID) %>% 
+  summarise(Num.Openings=n(),
+            Num.Trees=sum(NUMBER_PLANTED)) %>% 
+  ungroup() %>% 
+  group_by(Species,Zone) %>% 
+  summarise(Num.Openings=n(),
+            Num.Trees=sum(Num.Trees)) %>% 
+  arrange(desc(Species),desc(Num.Openings)) %>% 
+kable()
+
+```
+
+Hopefully this is helpful, more to come!
+
+PS all files (except for spreadsheets, too large) are stored here: https://github.com/hgriesbauer/SAF_planting_NorthArea
+
+
+

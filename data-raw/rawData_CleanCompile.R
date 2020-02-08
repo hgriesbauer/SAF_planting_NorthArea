@@ -37,6 +37,12 @@ blDatRaw<-
   mutate(BGC=paste(BGC_ZONE,BGC_SUBZONE,sep="")) # create BGC unit column
 
 ############################################
+# Remove records with species == "Bb
+blDatRaw<-
+  blDatRaw %>% 
+  filter(SPECIES%in%c("BA","BL"))
+
+############################################
 ### Fix missing BGC values
 # Download geometry for these openings and get BEC data for them in a separate file
 blDatRaw[blDatRaw$BGC=="NANA",] %>% 
@@ -102,13 +108,20 @@ bgcInd<-which(blDatRaw$BGC%in%bgcLookup$Old==TRUE)
 
     # Double check to make sure it worked (yes)
     which(X$BGC%in%bgcLookup$Old==TRUE)  
-
-  # Some final formatting
+    
+    # Some final formatting
     X<-  
       X %>% 
       dplyr::select(-BGC_ZONE,-BGC_SUBZONE) %>% 
       mutate(Zone=stringr::str_sub(BGC,end=-3)) %>% 
-      mutate(Subzone=stringr::str_sub(BGC,start=-2)) 
+      mutate(Subzone=stringr::str_sub(BGC,start=-2)) %>% 
+      dplyr::select(-New)
+    
+    # Deal with one subzone entered incorrectly as ws1
+    X$Subzone[which(X$Zone=="CWHw")]="ws"
+    X$Zone[which(X$Zone=="CWHw")]="CWH"
+    
+    
     
 #####################
 # Rename final varuiable
