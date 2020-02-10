@@ -1,0 +1,155 @@
+---
+title: "Historical SAF planting analysis"
+author: "Hardy Griesbauer"
+date: "10/02/2020"
+output:
+  word_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE,
+                       fig.height=8,fig.width=12)
+library(tidyverse)
+
+options(scipen = 9999)
+
+# Load data
+load("../data/blData.RData")
+
+# Some basic formatting
+X<-
+  blDat %>% 
+   dplyr::select(Region=REGION,Num_planted=NUMBER_PLANTED,Year=YEAR,everything()) %>% 
+    mutate(Region2=factor(Region,labels=c("Cariboo","NorthEast","Omineca","Skeena")))
+                                         
+      
+
+```
+
+## Historical analysis of SAF planting in northern BC
+
+### Annual SAF planted by year in four regions
+
+```{r}
+X %>% 
+  filter(SPECIES=="BL") %>%  # filter for BL only
+  group_by(Region2,Year) %>% 
+  summarise(Num_planted=sum(Num_planted)) %>% # summarize number of Bl planted
+  ggplot()+
+  aes(x=Year,y=Num_planted)+
+  geom_bar(stat="Identity")+
+  facet_wrap(~Region2)+
+  theme(axis.text.x = element_text(angle = 270,vjust=0.3))+
+  scale_x_continuous(breaks=seq(1985, 2020, 5),limits=c(1985, 2020))+
+  ylab("Number of seedlings planted")
+
+
+
+```
+
+I kept the y-axis scaled the same for all regions to allow for better comparisons.
+
+Figure shows that number of SAF planted in Skeena far exceeds number planted in other three regions.
+
+Seems that SAF planting in all regions peaked between 1995 and 2000, and then dropped substantially around 2002.
+
+We can zoom in on Omineca and Cariboo regions to see their numbers in more detail.
+
+### Cariboo region
+```{r}
+X %>% 
+  filter(SPECIES=="BL") %>%  # filter for BL only
+  filter(Region2=="Cariboo") %>%  # filter for Cariboo region
+  group_by(Region2,Year) %>% 
+  summarise(Num_planted=sum(Num_planted)) %>% # summarize number of Bl planted
+  ggplot()+
+  aes(x=Year,y=Num_planted)+
+  geom_bar(stat="Identity")+
+  theme(axis.text.x = element_text(angle = 270,vjust=0.3))+
+  scale_x_continuous(breaks=seq(1985, 2020, 5),limits=c(1985, 2020))+
+  ylab("Number of seedlings planted")+
+  ggtitle("Annual number of SAF seedlings planted in Cariboo Region")
+
+
+
+```
+
+
+### Omineca Region
+```{r}
+X %>% 
+  filter(SPECIES=="BL") %>%  # filter for BL only
+  filter(Region2=="Omineca") %>%  # filter for Cariboo region
+  group_by(Region2,Year) %>% 
+  summarise(Num_planted=sum(Num_planted)) %>% # summarize number of Bl planted
+  ggplot()+
+  aes(x=Year,y=Num_planted)+
+  geom_bar(stat="Identity")+
+  theme(axis.text.x = element_text(angle = 270,vjust=0.3))+
+  scale_x_continuous(breaks=seq(1985, 2020, 5),limits=c(1985, 2020))+
+  ylab("Number of seedlings planted")+
+  ggtitle("Annual number of SAF seedlings planted in Omineca Region")
+```
+
+### Combined BA and BL planting in Skeena
+Below is a figure showing annual planting in Skeena for both fir species (subalpine and amabalis).
+
+```{r}
+X %>% 
+  filter(Region2=="Skeena") %>%  # filter for Cariboo region
+  group_by(Region2,Year,SPECIES) %>% 
+  summarise(Num_planted=sum(Num_planted)) %>% # summarize number of Bl planted
+  ggplot()+
+  aes(x=Year,y=Num_planted,fill=SPECIES)+
+  geom_bar(stat="Identity",position="stack")+
+  theme(axis.text.x = element_text(angle = 270,vjust=0.3))+
+  scale_x_continuous(breaks=seq(1985, 2020, 5),limits=c(1985, 2020))+
+  ylab("Number of seedlings planted")+
+  ggtitle("Annual number of fir (BL/BA) seedlings planted in Skeena Region")
+
+
+```
+
+***
+## Where are we planting SAF?
+### Annual SAF planting by BGC unit categories
+To show where SAF is being planted from an biogeoclimatic perspective, I created the following categories:
+
+1. Wetbelt (ICH and SBSw/v subzones)
+2. Sub-boreal/Boreal (SBS m/d subzones, BWBS); and 
+3. High-elevation (ESSF)
+4. Coastal (CWH/MH)
+
+
+```{r}
+X %>% 
+  filter(SPECIES=="BL") %>% # filter for SAF
+  mutate(BGC.Cat="Sub-Boreal") %>% # create new category column
+  mutate(BGC.Cat=replace(BGC.Cat,Zone=="ESSF","High-El.")) %>%  # Create High-Elevation category
+   mutate(BGC.Cat=replace(BGC.Cat,Zone=="SBS" & Subzone=="wk"|Subzone=="vk","Wetbelt")) %>%  # Create Wetbelt category
+  mutate(BGC.Cat=replace(BGC.Cat,Zone=="ICH","Wetbelt")) %>%
+  mutate(BGC.Cat=replace(BGC.Cat,Zone=="CWH"|Zone=="MH","Coastal")) %>% 
+  drop_na(Zone) %>% # drop the one opening without BGC
+  group_by(BGC.Cat,Year) %>% # group by BGC category
+  summarise(Num_planted=sum(Num_planted)) %>%  # sum up planted numbers
+  
+# Produce plot
+  ggplot()+
+  aes(x=Year,y=Num_planted)+
+  geom_bar(stat="Identity",position="stack")+
+  theme(axis.text.x = element_text(angle = 270,vjust=0.3))+
+  scale_x_continuous(breaks=seq(1985, 2020, 5),limits=c(1985, 2020))+
+  facet_wrap(~BGC.Cat)+
+  ylab("Number of seedlings planted")+
+  ggtitle("Annual number of SAF seedlings planted by BGC category")
+
+
+```
+
+Most SAF seedlings in the 1990s were planted in wetbelt, but since ~2002 it look like equal amounts planted in sub-boreal, wetbelt and high-elevation units.
+
+Just preliminary at this point.  I can send the data itself for you to create your own figures, or could change the figures to suit the presentation.  Whatever's easier.
+
+More to come!
+
